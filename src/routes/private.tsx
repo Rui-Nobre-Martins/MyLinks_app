@@ -44,7 +44,7 @@ export function Private({children}: PrivateProps): any{
                </div>
     }
     if(!signed){
-            return <Navigate to="/loaging"/>
+            return <Navigate to="/"/>
     }
 
     return children;
