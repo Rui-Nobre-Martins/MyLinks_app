@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { Header } from "../../components/header/header";
 import { Input } from "../../components/input/input";
@@ -15,6 +15,14 @@ import {
     deleteDoc
 } from "firebase/firestore"
 
+interface LinkProps{
+    id: string,
+    name: string,
+    url: string,
+    bg:string,
+    color: string
+}
+
 
 export function Admin(){
 
@@ -23,10 +31,60 @@ export function Admin(){
     const [textColorInput, setTextColorInput] = useState("#f1f1f1")
     const [backgroundColorInput, setBackgroundColorInput] = useState("#121212")
 
-    async function handleRegister(e: FormEvent){
+    const [links, setLinks] = useState <LinkProps[]>([])
+
+    useEffect(() => {
+        const linksRef = collection(db, "links");
+        const queryRef = query(linksRef, orderBy("created", "asc"));
+
+        const unsub = onSnapshot(queryRef, (snapshot)=>{
+            let list = [] as LinkProps[];
+
+            snapshot.forEach((doc)=>{
+                list.push({
+                    id: doc.id,
+                    name: doc.data().name,
+                    url: doc.data().url,
+                    bg: doc.data().bg,
+                    color: doc.data().color
+                })
+            })
+            setLinks(list);
+        })
+
+        return () => {
+            unsub();
+        }
+    }, [])
+
+    function handleRegister(e: FormEvent){
         e.preventDefault();
 
-        alert("teste")
+        if( nameInput === "" || urlInput ===""){
+            alert("Empty fields")
+            return;
+        }
+
+        addDoc(collection(db, "links"), {
+            name: nameInput,
+            url: urlInput,
+            bg: backgroundColorInput,
+            color: textColorInput,
+            created: new Date()
+        })
+        .then(()=> {
+            setNameInput("")
+            setUrlInput("")
+            console.log("Registration sucessed")
+        })
+        .catch((error)=>{
+            console.log("Registration ERROR" + error)
+        })
+    }
+
+    async function handleDeleteLink(id: string){
+        const docRef = doc(db, "links", id)
+        await deleteDoc(docRef);
     }
 
     return(
@@ -90,21 +148,25 @@ export function Admin(){
                 My Links
             </h2>
 
-            <article 
-            className="flex items-center justify-between w-11/12 max-w-xl rounded py-3 px-2 mb-2 select-none"
-            style={{backgroundColor: "#2563EB", color:"#FFF"}}
-            >
-                
-                <p>Linkedin</p>
-                <div>
-                    <button
-                    className="border border-dashed p-1 rounded cursor-pointer"
-                    >
-                        <FiTrash size={18} color="#fff"/>
-                    </button>
+            {links.map((link)=>(
+                <article 
+                key={link.id}
+                className="flex items-center justify-between w-11/12 max-w-xl rounded py-3 px-2 mb-2 select-none"
+                style={{backgroundColor: link.bg, color:link.color}}
+                >
                     
-                </div>
-            </article>
+                    <p>{link.name}</p>
+                    <div>
+                        <button
+                        className="border border-dashed p-1 rounded cursor-pointer"
+                        onClick={ ()=> handleDeleteLink(link.id)}
+                        >
+                            <FiTrash size={18} color="#fff"/>
+                        </button>
+                        
+                    </div>
+                </article>
+            ))}
         </div>
         </>
     )
